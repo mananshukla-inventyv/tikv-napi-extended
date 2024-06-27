@@ -31,5 +31,7 @@
   "publishConfig": {
     "registry": "https://registry.npmjs.org/",
     "access": "public"
-  }
+  },
+  "repository": "https://github.com/mananshukla-inventyv/tikv-napi-extended.git"
+
 }
