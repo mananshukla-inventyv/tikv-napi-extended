@@ -1,6 +1,6 @@
 {
     "name": "tikv-napi-extended",
-    "version": "1.0.2",
+    "version": "1.0.0",
     "description": "TiKV Client Written in Rust!!!",
     "main": "index.js",
     "scripts": {

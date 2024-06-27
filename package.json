@@ -1,6 +1,6 @@
 {
   "name": "tikv-napi-extended",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "main": "index.js",
   "types": "index.d.ts",
   "napi": {
@@ -27,5 +27,9 @@
     "universal": "napi universal",
     "version": "napi version"
   },
-  "packageManager": "yarn@4.3.1"
+  "packageManager": "yarn@4.3.1",
+  "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
+  }
 }
