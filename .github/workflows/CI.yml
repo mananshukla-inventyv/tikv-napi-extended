@@ -138,7 +138,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Setup node
-        uses: actions/setup-node@v
+        uses: actions/setup-node@v4
         with:
           registry-url: 'https://registry.npmjs.org/'
           node-version-file: '.nvmrc'
