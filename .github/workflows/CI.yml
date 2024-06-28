@@ -151,8 +151,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-      - name: Create npm folder
-        run: mkdir npm
+      # - name: Create npm folder
+      #   run: mkdir npm
 
       - name: Move index.js to npm folder
         run: mv index.js npm/
