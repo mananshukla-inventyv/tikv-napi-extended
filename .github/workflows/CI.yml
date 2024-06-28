@@ -151,8 +151,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-      # - name: Create npm folder
-      #   run: mkdir npm
+      - name: Create npm folder
+        run: mkdir npm
 
       - name: Move index.js to npm folder
         run: mv index.js npm/
@@ -169,7 +169,7 @@ jobs:
         run: |
           cat << EOF > npm/package.json
           {
-          "name": "your-package-name",
+          "name": "tikv-napi2",
           "version": "1.1.0",
           "description": "Your package description",
           "main": "index.js",
