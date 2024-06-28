@@ -164,23 +164,6 @@ jobs:
           else
             echo "No artifacts folder found"
           fi
-
-      - name: Create package.json
-        run: |
-          cat << EOF > npm/package.json
-          {
-          "name": "tikv-napi2",
-          "version": "1.1.0",
-          "description": "Your package description",
-          "main": "index.js",
-          "scripts": {
-            "test": "echo \"Error: no test specified\" && exit 1"
-          },
-          "keywords": [],
-          "author": "Your Name",
-          "license": "ISC"
-          }
-          EOF
       - name: List packages
         run: ls -R ./npm
         shell: bash
