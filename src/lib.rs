@@ -535,8 +535,8 @@ pub async fn get_batch(
   }
 }
 
-#[napi(js_name = "deleteSingleRecord")]
-pub async fn delete_single_record(
+#[napi(js_name = "deleteDocument")]
+pub async fn delete_document(
   key: String,
   project_name: Option<String>,
 ) -> Result<String, napi::Error> {

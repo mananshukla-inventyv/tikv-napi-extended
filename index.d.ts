@@ -22,4 +22,4 @@ export function addDocument(key: string, value: any, projectName: string | undef
 export function replaceDocument(key: string, value: any, cas: string | undefined | null, projectName: string | undefined | null, updateInEs: boolean, retry?: number | undefined | null): Promise<string>
 export function getBatchUsingScan(start: string, end: string, batchSize: number, keysOnly: boolean, projectName?: string | undefined | null): Promise<BatchResponse>
 export function getBatch(keys: Array<string>, projectName?: string | undefined | null): Promise<BatchResponse>
-export function deleteSingleRecord(key: string, projectName?: string | undefined | null): Promise<string>
+export function deleteDocument(key: string, projectName?: string | undefined | null): Promise<string>

@@ -310,7 +310,7 @@ if (!nativeBinding) {
   throw new Error(`Failed to load native binding`)
 }
 
-const { getNextKey, initClient, startLogger, getDocument, addDocument, replaceDocument, getBatchUsingScan, getBatch, deleteSingleRecord } = nativeBinding
+const { getNextKey, initClient, startLogger, getDocument, addDocument, replaceDocument, getBatchUsingScan, getBatch, deleteDocument } = nativeBinding
 
 module.exports.getNextKey = getNextKey
 module.exports.initClient = initClient
@@ -320,4 +320,4 @@ module.exports.addDocument = addDocument
 module.exports.replaceDocument = replaceDocument
 module.exports.getBatchUsingScan = getBatchUsingScan
 module.exports.getBatch = getBatch
-module.exports.deleteSingleRecord = deleteSingleRecord
+module.exports.deleteDocument = deleteDocument
