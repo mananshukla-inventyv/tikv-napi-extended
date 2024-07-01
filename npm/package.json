@@ -1,5 +1,5 @@
 {
-    "name": "tikv-napi2",
+    "name": "tikv-napi-extended",
     "version": "1.1.0",
     "description": "TiKV Client Written in Rust!!!",
     "main": "index.js",
