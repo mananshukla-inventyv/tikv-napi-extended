@@ -122,6 +122,9 @@ jobs:
           image: ${{ matrix.settings.docker }}
           options: '--user 0:0 -v ${{ github.workspace }}/.cargo-cache/git/db:/usr/local/cargo/git/db -v ${{ github.workspace }}/.cargo/registry/cache:/usr/local/cargo/registry/cache -v ${{ github.workspace }}/.cargo/registry/index:/usr/local/cargo/registry/index -v ${{ github.workspace }}:/build -w /build'
           run: |
+            if [ "${{ matrix.settings.target }}" = "x86_64-alpine-linux-musl" ]; then
+              apk add --no-cache nodejs npm yarn rust cargo openssl-dev protoc
+            fi
             which protoc
             ${{ matrix.settings.build }}
       - name: Build
