@@ -2,20 +2,20 @@ name: CI
 env:
   DEBUG: napi:*
   APP_NAME: tikv-napi-extended
-  MACOSX_DEPLOYMENT_TARGET: '10.13'
+  MACOSX_DEPLOYMENT_TARGET: "10.13"
 permissions:
   contents: write
   id-token: write
-'on':
+"on":
   push:
     branches:
       - main
     tags-ignore:
-      - '**'
+      - "**"
     paths-ignore:
-      - '**/*.md'
+      - "**/*.md"
       - LICENSE
-      - '**/*.gitignore'
+      - "**/*.gitignore"
       - .editorconfig
       - docs/**
   pull_request: null
@@ -113,26 +113,22 @@ jobs:
         with:
           node-version: 20
           cache: yarn
-          architecture: x86  
+          architecture: x86
 
       - name: Build in docker
         uses: addnab/docker-run-action@v3
         if: ${{ matrix.settings.docker }}
         with:
-            image: ${{ matrix.settings.docker }}
-            options: '--user 0:0 -v ${{ github.workspace }}/.cargo-cache/git/db:/usr/local/cargo/git/db -v ${{ github.workspace }}/.cargo/registry/cache:/usr/local/cargo/registry/cache -v ${{ github.workspace }}/.cargo/registry/index:/usr/local/cargo/registry/index -v ${{ github.workspace }}:/build -w /build'
-            run: |
-              if [ "${{ matrix.settings.target }}" = "x86_64-unknown-linux-musl" ]; then
-                apk add --no-cache nodejs npm yarn rust cargo openssl-dev perl make musl-dev gcc
-                export OPENSSL_DIR=/usr
-                export OPENSSL_STATIC=1
-              elif [ "${{ matrix.settings.target }}" = "x86_64-alpine-linux-musl" ]; then
-                apk add --no-cache nodejs npm yarn rust cargo openssl-dev libressl-dev perl make musl-dev gcc
-                export OPENSSL_DIR=/usr
-                export OPENSSL_STATIC=1
-              fi
-              which protoc
-              ${{ matrix.settings.build }}
+          image: ${{ matrix.settings.docker }}
+          # options: "--user 0:0 -v ${{ github.workspace }}/.cargo-cache/git/db:/usr/local/cargo/git/db -v ${{ github.workspace }}/.cargo/registry/cache:/usr/local/cargo/registry/cache -v ${{ github.workspace }}/.cargo/registry/index:/usr/local/cargo/registry/index -v ${{ github.workspace }}:/build -w /build"
+          run: |
+            if [ "${{ matrix.settings.target }}" = "x86_64-unknown-linux-musl" ] || [ "${{ matrix.settings.target }}" = "x86_64-alpine-linux-musl" ]; then
+             apk add --no-cache nodejs npm yarn rust cargo openssl-dev perl make musl-dev gcc
+             export OPENSSL_DIR=/usr
+             export OPENSSL_STATIC=1
+            fi
+            which protoc
+            ${{ matrix.settings.build }}
       - name: Build
         run: ${{ matrix.settings.build }}
         if: ${{ !matrix.settings.docker }}
