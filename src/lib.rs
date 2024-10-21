@@ -8,11 +8,13 @@ pub mod logger;
 
 use std::{thread, time::Duration};
 
+use async_recursion::async_recursion;
 use logger::LoggerConfig;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tikv_client::{raw::Client, Config};
+
 use uuid::Uuid;
 static TIKV: OnceCell<Client> = OnceCell::new();
 
@@ -107,7 +109,7 @@ pub async fn get_document(
   project_name: Option<String>,
 ) -> Result<Value, napi::Error> {
   let client = create_client(None).await;
-  
+
   match client {
     Ok(client) => {
       let mut new_key = key;
@@ -129,21 +131,15 @@ pub async fn get_document(
           Some(value) => {
             let res = String::from_utf8(value)
               .map_err(|e| napi::Error::from_reason(format!("UTF-8 conversion error: {}", e)))?;
-            let mut parsed_json: Value = serde_json::from_str(&res)
+            let parsed_json: Value = serde_json::from_str(&res)
               .map_err(|e| napi::Error::from_reason(format!("JSON parsing error: {}", e)))?;
             if withCas {
-              return Ok(parsed_json);
+              return Ok(json!({
+                  "data" : parsed_json,
+                  "cas" : parsed_json.to_string()
+              }));
             } else {
-              let without_cas = match parsed_json.as_object_mut() {
-                Some(without_cas) => without_cas,
-                None => {
-                  return Err(napi::Error::from_reason(
-                    "Error while converting Value to object".to_string(),
-                  ))
-                }
-              };
-              let _ = without_cas.remove(&"cas".to_owned());
-              Ok(json!(without_cas))
+              Ok(json!(parsed_json))
             }
           }
           None => {
@@ -188,7 +184,9 @@ pub async fn add_document(
       let client_res = client.put(new_key.to_owned(), value.to_string()).await; // Returns a `tikv_client::Error` on failure.
       match client_res {
         Ok(_res) => {
-          return Ok(String::from("New Record Added With Key: ".to_owned() + &key));
+          return Ok(String::from(
+            "New Record Added With Key: ".to_owned() + &key,
+          ));
         }
         Err(error) => {
           if retry <= 10 {
@@ -205,7 +203,9 @@ pub async fn add_document(
             {
               return Err(napi::Error::from_reason(error.to_string()));
             } else {
-              return Ok(String::from("New Record Added With Key: ".to_owned() + &key));
+              return Ok(String::from(
+                "New Record Added With Key: ".to_owned() + &key,
+              ));
             }
           } else {
             log::error!(
@@ -233,11 +233,12 @@ pub async fn replace_document(
   value: Value,
   cas: Option<String>,
   project_name: Option<String>,
-  updateInES:bool,
+  updateInES: bool,
   retry: Option<u32>,
 ) -> Result<String, napi::Error> {
   let client = create_client(None).await;
   let retry = retry.unwrap_or(1);
+  
   match client {
     Ok(client) => {
       let mut new_key = key.to_owned();
@@ -418,26 +419,28 @@ pub async fn get_batch_using_scan(
                   .replace(&prefix_value, "")
               })
               .collect();
-            let string_values: Result<Vec<Value>, napi::Error>= scan
-                  .iter()
-                  .map(|key| {
-                    let res=String::from_utf8_lossy(&key.1.to_vec()).to_string();
-                    serde_json::from_str(&res)
-                    .map_err(|e| napi::Error::from_reason(format!("JSON parsing error: {}", e)))
-
-                  }).collect();
-                  match string_values {
-                      Ok(values)=>{
-                        let res = BatchResponse {
-                          keys: string_keys,
-                          values: Some(values),
-                        };
-                        return Ok(res);
-                      }
-                      Err(error)=>{
-                        return Err(napi::Error::from_reason("Error while parsing values in kev value pair"));
-                      }
-                  }
+            let string_values: Result<Vec<Value>, napi::Error> = scan
+              .iter()
+              .map(|key| {
+                let res = String::from_utf8_lossy(&key.1.to_vec()).to_string();
+                serde_json::from_str(&res)
+                  .map_err(|e| napi::Error::from_reason(format!("JSON parsing error: {}", e)))
+              })
+              .collect();
+            match string_values {
+              Ok(values) => {
+                let res = BatchResponse {
+                  keys: string_keys,
+                  values: Some(values),
+                };
+                return Ok(res);
+              }
+              Err(error) => {
+                return Err(napi::Error::from_reason(
+                  "Error while parsing values in kev value pair",
+                ));
+              }
+            }
           }
           Err(error) => return Err(napi::Error::from_reason(error.to_string())),
         }
@@ -495,27 +498,28 @@ pub async fn get_batch(
                       .replace(&prefix_value, "")
                   })
                   .collect();
-                let string_values: Result<Vec<Value>, napi::Error>= get_batch_res
+                let string_values: Result<Vec<Value>, napi::Error> = get_batch_res
                   .iter()
                   .map(|key| {
-                    let res=String::from_utf8_lossy(&key.1.to_vec()).to_string();
+                    let res = String::from_utf8_lossy(&key.1.to_vec()).to_string();
                     serde_json::from_str(&res)
-                    .map_err(|e| napi::Error::from_reason(format!("JSON parsing error: {}", e)))
-
-                  }).collect();
-                  match string_values {
-                      Ok(values)=>{
-                        let res = BatchResponse {
-                          keys: string_keys,
-                          values: Some(values),
-                        };
-                        return Ok(res);
-                      }
-                      Err(error)=>{
-                        return Err(napi::Error::from_reason("Error while parsing values in kev value pair"));
-                      }
+                      .map_err(|e| napi::Error::from_reason(format!("JSON parsing error: {}", e)))
+                  })
+                  .collect();
+                match string_values {
+                  Ok(values) => {
+                    let res = BatchResponse {
+                      keys: string_keys,
+                      values: Some(values),
+                    };
+                    return Ok(res);
                   }
-                
+                  Err(error) => {
+                    return Err(napi::Error::from_reason(
+                      "Error while parsing values in kev value pair",
+                    ));
+                  }
+                }
               }
               Err(error) => return Err(napi::Error::from_reason(error.to_string())),
             }
@@ -568,6 +572,106 @@ pub async fn delete_document(
     }
     Err(error) => {
       return Err(napi::Error::from_reason(error.to_string()));
+    }
+  }
+}
+
+#[napi(js_name = "getNextCounter")]
+pub async fn get_next_counter(
+  key: String,
+  project_name: Option<String>,
+  initial_counter: Option<u32>,
+) -> Result<String, napi::Error> {
+  // Attempt to retrieve the document using `get_document`
+  let doc = get_document(key.clone(), false, project_name.clone()).await;
+  // println!("0 : doc : {:?}", doc);
+  match doc {
+    Ok(doc) => {
+      // println!("1 : doc : {:?}", doc);
+
+      // If `doc` is an object, extract the value you're interested in
+      if let Some(initial_value) = initial_counter {
+        let initial_value_str = initial_value.to_string();
+        let value = serde_json::json!(initial_value); // Convert the initial value to a JSON value
+        let res = add_document(
+          key.clone(),
+          value,
+          project_name.clone(),
+          false,   // Assuming updateInES is false for this scenario
+          Some(0), // Initial retry value
+        )
+        .await;
+
+        match res {
+          Ok(_res) => {
+            return Ok(initial_value_str);
+          }
+          Err(_error) => {
+            return Err(napi::Error::from_reason(
+              "Error while setting the initial counter value".to_string(),
+            ));
+          }
+        }
+      }
+
+      // Handle `doc` if it's a JSON object or an integer
+      let counter = if let Some(counter_val) = doc.as_i64() {
+        counter_val
+      } else if let Some(counter_str) = doc.as_str() {
+        counter_str.parse::<i64>().unwrap_or(0)
+      } else {
+        return Err(napi::Error::from_reason(
+          "Error: Invalid format for counter value".to_string(),
+        ));
+      };
+
+      // println!("counter value : {:?}", counter);
+      let new_counter = counter + 1;
+      let value = serde_json::json!(new_counter); // Convert the new counter to a JSON value
+                                                  // println!("counter value in lib : {:?}", value);
+      let res = add_document(
+        key.clone(),
+        value,
+        project_name.clone(),
+        false,   // Assuming updateInES is false for this scenario
+        Some(0), // Initial retry value
+      )
+      .await;
+
+      match res {
+        Ok(_res) => {
+          println!("update counter success full : {:?}", _res);
+          return Ok(new_counter.to_string());
+        }
+        Err(error) => {
+          return Err(error);
+        }
+      }
+    }
+    Err(_error) => {
+      // If the key doesn't exist, initialize it with the initial_counter or default to 1
+      // println!("2 : doc : {:?}", _error);
+      let counter = initial_counter.unwrap_or(1) as i64;
+      let value = serde_json::json!(counter); // Convert the counter to a JSON value
+      let res = add_document(
+        key.clone(),
+        value,
+        project_name.clone(),
+        false,   // Assuming updateInES is false for this scenario
+        Some(0), // Initial retry value
+      )
+      .await;
+
+      match res {
+        Ok(_res) => {
+          return Ok(counter.to_string());
+        }
+        Err(_error) => {
+          return Err(napi::Error::from_reason(
+            "Error while adding counter document".to_string(),
+          ));
+        }
+      }
     }
   }
 }
