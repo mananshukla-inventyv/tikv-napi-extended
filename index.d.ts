@@ -18,8 +18,10 @@ export function getNextKey(): string
 export function initClient(tikvConnParam?: TikvConnParams | undefined | null): Promise<string>
 export function startLogger(): void
 export function getDocument(key: string, withCas: boolean, projectName?: string | undefined | null): Promise<any>
-export function addDocument(key: string, value: any, projectName: string | undefined | null, updateInEs: boolean, retry?: number | undefined | null): Promise<string>
+export function addDocument(key: string, value: any, projectName: string | undefined | null, updateInEs: boolean, retry?: number | undefined | null): Promise<boolean>
 export function replaceDocument(key: string, value: any, cas: string | undefined | null, projectName: string | undefined | null, updateInEs: boolean, retry?: number | undefined | null): Promise<string>
 export function getBatchUsingScan(start: string, end: string, batchSize: number, keysOnly: boolean, projectName?: string | undefined | null): Promise<BatchResponse>
-export function getBatch(keys: Array<string>, projectName?: string | undefined | null): Promise<BatchResponse>
+export function getBatch(keys: Array<string>, withCas: boolean, projectName?: string | undefined | null): Promise<any>
+export function getDocumentsV2(keys: Array<string>, withCas: boolean, projectName?: string | undefined | null): Promise<any>
 export function deleteDocument(key: string, projectName?: string | undefined | null): Promise<string>
+export function getNextCounter(key: string, projectName?: string | undefined | null, initialCounter?: number | undefined | null): Promise<string>

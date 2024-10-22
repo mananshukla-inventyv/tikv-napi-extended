@@ -6,7 +6,7 @@ extern crate napi_derive;
 pub mod configration;
 pub mod logger;
 
-use std::{thread, time::Duration};
+use std::{collections::HashMap, thread, time::Duration};
 
 use logger::LoggerConfig;
 use once_cell::sync::OnceCell;
@@ -566,6 +566,42 @@ pub async fn get_batch(
           "Empty Array Without keys found".to_string(),
         ));
       }
+    }
+    Err(error) => {
+      log::error!("Failed to create client: {}", error);
+      Err(napi::Error::from_reason(error.to_string()))
+    }
+  }
+}
+
+#[napi(js_name = "getDocumentsV2")]
+pub async fn get_documents_v2(
+  keys: Vec<String>,
+  withCas: bool,
+  project_name: Option<String>,
+) -> Result<Value, napi::Error> {
+  let client = create_client(None).await;
+  let mut docs = HashMap::new();
+  let mut errors = HashMap::new();
+  match client {
+    Ok(client) => {
+      for key in keys{
+        let doc = get_document(key.to_owned(), withCas, project_name.to_owned()).await;
+        match doc {
+          Ok(doc) => {
+            docs.insert(key.to_owned(), doc);
+          }
+          Err(error) => {
+            errors.insert(key.to_owned(), error.to_string());
+          }
+        }
+      }
+      Ok(json!(
+        {
+          "docs": docs,
+          "errors": errors
+        }
+      ))
     }
     Err(error) => {
       log::error!("Failed to create client: {}", error);
