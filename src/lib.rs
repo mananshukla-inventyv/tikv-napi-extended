@@ -27,7 +27,6 @@ pub struct TikvConnParams {
   pub host: String,
 }
 
-
 #[derive(Debug, Serialize, Deserialize)]
 #[napi(object)]
 pub struct BatchResponse {
@@ -135,7 +134,7 @@ pub async fn get_document(
               .map_err(|e| napi::Error::from_reason(format!("JSON parsing error: {}", e)))?;
             if withCas {
               return Ok(json!({
-                  "data" : parsed_json,
+                  "value" : parsed_json,
                   "cas" : parsed_json.to_string()
               }));
             } else {
@@ -163,7 +162,7 @@ pub async fn add_document(
   project_name: Option<String>,
   updateInES: bool,
   retry: Option<u32>,
-) -> Result<String, napi::Error> {
+) -> Result<bool, napi::Error> {
   let client = create_client(None).await;
   let retry = retry.unwrap_or(0);
   match client {
@@ -184,9 +183,11 @@ pub async fn add_document(
       let client_res = client.put(new_key.to_owned(), value.to_string()).await; // Returns a `tikv_client::Error` on failure.
       match client_res {
         Ok(_res) => {
-          return Ok(String::from(
-            "New Record Added With Key: ".to_owned() + &key,
-          ));
+          println!(" New Record Added With Key:  {:?}", &key.to_owned());
+          return Ok(true);
+          // return Ok(String::from(
+          //   "New Record Added With Key: ".to_owned() + &key,
+          // ));
         }
         Err(error) => {
           if retry <= 10 {
@@ -203,9 +204,8 @@ pub async fn add_document(
             {
               return Err(napi::Error::from_reason(error.to_string()));
             } else {
-              return Ok(String::from(
-                "New Record Added With Key: ".to_owned() + &key,
-              ));
+              println!(" New Record Added With Key:  {:?}", &key.to_owned());
+              return Ok(true);
             }
           } else {
             log::error!(
@@ -238,7 +238,7 @@ pub async fn replace_document(
 ) -> Result<String, napi::Error> {
   let client = create_client(None).await;
   let retry = retry.unwrap_or(1);
-  
+
   match client {
     Ok(client) => {
       let mut new_key = key.to_owned();
@@ -455,8 +455,9 @@ pub async fn get_batch_using_scan(
 #[napi(js_name = "getBatch")]
 pub async fn get_batch(
   keys: Vec<String>,
+  withCas: bool,
   project_name: Option<String>,
-) -> Result<BatchResponse, napi::Error> {
+) -> Result<Value, napi::Error> {
   let client = create_client(None).await;
   let mut prefix_value = "".to_string();
   let mut new_keys: Result<Vec<String>, napi::Error> = Ok(keys.to_owned());
@@ -508,13 +509,47 @@ pub async fn get_batch(
                   .collect();
                 match string_values {
                   Ok(values) => {
-                    let res = BatchResponse {
-                      keys: string_keys,
-                      values: Some(values),
-                    };
-                    return Ok(res);
+                    // let res = BatchResponse {
+                    //   keys: string_keys,
+                    //   values: Some(values),
+                    // };
+                    if !withCas {
+                      // Create a new HashMap to store the key-value pairs
+                      let mut key_value_map = serde_json::Map::new();
+
+                      for (key, value) in string_keys.into_iter().zip(values.into_iter()) {
+                        key_value_map.insert(key, value);
+                      }
+
+                      // Return the HashMap as JSON
+                      let response = serde_json::Value::Object(key_value_map);
+                      return Ok(response);
+                    } else {
+                      // Create a new HashMap to store the key-value pairs with CAS
+                      let mut key_value_map_with_cas = serde_json::Map::new();
+
+                      for (key, value) in string_keys.into_iter().zip(values.into_iter()) {
+                        // Create a new object to hold both cas and value
+                        let mut cas_value_object = serde_json::Map::new();
+
+                        let cas_value = value.to_string(); // Replace this with actual CAS value logic
+
+                        // Add CAS and value to the object
+                        cas_value_object
+                          .insert("cas".to_string(), serde_json::Value::String(cas_value));
+                        cas_value_object.insert("value".to_string(), value);
+
+                        // Insert the key with the cas-value object
+                        key_value_map_with_cas
+                          .insert(key, serde_json::Value::Object(cas_value_object));
+                      }
+
+                      // Return the HashMap as JSON
+                      let response = serde_json::Value::Object(key_value_map_with_cas);
+                      return Ok(response);
+                    }
                   }
-                  Err(error) => {
+                  Err(_error) => {
                     return Err(napi::Error::from_reason(
                       "Error while parsing values in kev value pair",
                     ));
@@ -640,7 +675,7 @@ pub async fn get_next_counter(
 
       match res {
         Ok(_res) => {
-          println!("update counter success full : {:?}", _res);
+          // println!("update counter success full : {:?}", _res);
           return Ok(new_counter.to_string());
         }
         Err(error) => {
