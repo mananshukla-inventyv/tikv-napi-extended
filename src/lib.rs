@@ -8,7 +8,6 @@ pub mod logger;
 
 use std::{thread, time::Duration};
 
-use async_recursion::async_recursion;
 use logger::LoggerConfig;
 use once_cell::sync::OnceCell;
 use serde::{Deserialize, Serialize};
@@ -27,6 +26,7 @@ pub struct TikvConnParams {
   pub sslclientkeycerti: String,
   pub host: String,
 }
+
 
 #[derive(Debug, Serialize, Deserialize)]
 #[napi(object)]
